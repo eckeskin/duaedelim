@@ -1,0 +1,18 @@
+{
+  "name": "tevhid-counter",
+  "version": "1.0.0",
+  "description": "Tevhid Counter uygulaması",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "echo 'No build step required'",
+    "build:css": "echo 'CSS build step removed'"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.5.0"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.1"
+  }
+}

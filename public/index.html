@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+      <title>Tevhid Counter</title>
+      <script src="https://cdn.tailwindcss.com"></script>
+      <link rel="stylesheet" href="/css/styles.css">
+      <style>
+         html, body {
+         touch-action: pan-x pan-y;
+         }
+         #personal-count {
+         -webkit-user-select: none;
+         -moz-user-select: none;
+         -ms-user-select: none;
+         user-select: none;
+         }
+         #success-modal {
+         display: none;
+         user-select: none; /* Modal içindeki yazıyı seçilemez yap */
+         }
+         #success-modal > div {
+         box-shadow: none !important;
+         border: none !important;
+         }
+         #close-modal {
+         box-shadow: none !important;
+         border: none !important;
+         outline: none !important;
+         }
+         #close-modal:focus, #close-modal:active {
+         outline: none !important;
+         box-shadow: none !important;
+         background-color: #3b82f6 !important;
+         }
+      </style>
+   </head>
+   <body class="bg-gradient-to-br from-blue-100 to-blue-300 flex items-center justify-center min-h-screen">
+      <div class="container">
+         <div class="arabic-text">
+            إِنَّا لِلّهِ وَإِنَّـا إِلَيْهِ رَاجِعونَ
+         </div>
+         <div class="transliteration">
+            İnna lillâhi ve innâ ileyhi râciûn
+         </div>
+         <div class="shahada">
+            Lâ ilâhe illâllah, Muhammedün Rasûlullah
+         </div>
+         <div class="target-text">
+            Hedef: <span id="target-input">0</span>
+         </div>
+         
+         <div id="count-display">
+            <span class="main-count">0</span>
+            <span id="personal-count">0</span>
+         </div>
+         
+         <div class="progress-container">
+            <div id="progress-bar"></div>
+         </div>
+         <div id="progress-text">0%</div>
+         
+         <div class="online-container">
+            <span class="online-dot"></span>
+            Online: <span id="online-count">0</span>
+         </div>
+
+         <!-- Geçici başarı mesajı -->
+         <div id="success-message" class="success-message">✨ Hedefe ulaşıldı ✨</div>
+      </div>
+
+      <script src="/socket.io/socket.io.js"></script>
+      <script src="/js/app.js"></script>
+   </body>
+</html>
