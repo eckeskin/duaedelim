@@ -257,6 +257,40 @@ document.addEventListener('DOMContentLoaded', function() {
     const sectionsWrapper = document.getElementById('sections-wrapper');
     let sectionCount = 0;
 
+    // Mouse ile kaydırma için değişkenler
+    let isScrolling = false;
+    let startX;
+    let scrollLeft;
+
+    // Mouse ile kaydırma olayları
+    sectionsWrapper.addEventListener('mousedown', (e) => {
+        isScrolling = true;
+        startX = e.pageX - sectionsWrapper.offsetLeft;
+        scrollLeft = sectionsWrapper.scrollLeft;
+        sectionsWrapper.style.cursor = 'grabbing';
+    });
+
+    sectionsWrapper.addEventListener('mousemove', (e) => {
+        if (!isScrolling) return;
+        e.preventDefault();
+        const x = e.pageX - sectionsWrapper.offsetLeft;
+        const walk = (x - startX) * 1.5;
+        sectionsWrapper.scrollLeft = scrollLeft - walk;
+    });
+
+    sectionsWrapper.addEventListener('mouseup', () => {
+        isScrolling = false;
+        sectionsWrapper.style.cursor = 'grab';
+    });
+
+    sectionsWrapper.addEventListener('mouseleave', () => {
+        isScrolling = false;
+        sectionsWrapper.style.cursor = 'grab';
+    });
+
+    // Başlangıçta cursor'ı grab yap
+    sectionsWrapper.style.cursor = 'grab';
+
     // Modal HTML'ini oluştur
     const modalHTML = `
         <div class="edit-modal-backdrop">
