@@ -249,4 +249,165 @@ class CounterApp {
 // Uygulama başlatma
 document.addEventListener("DOMContentLoaded", () => {
     new CounterApp();
+});
+
+// Yeni eklenen kodlar
+document.addEventListener('DOMContentLoaded', function() {
+    const addButton = document.getElementById('add-section');
+    const sectionsWrapper = document.getElementById('sections-wrapper');
+    let sectionCount = 0;
+
+    // Modal HTML'ini oluştur
+    const modalHTML = `
+        <div class="edit-modal-backdrop">
+            <div class="edit-modal" onclick="event.stopPropagation()">
+                <div class="edit-modal-header">
+                    <h3 class="edit-modal-title">Bölüm İçeriği</h3>
+                </div>
+                <input type="text" class="edit-modal-input" placeholder="Metin girin...">
+                <div class="edit-modal-actions">
+                    <button class="edit-modal-button edit-modal-cancel">İptal</button>
+                    <button class="edit-modal-button edit-modal-save">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Modal'ı body'e ekle
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Modal elementlerini seç
+    const modalBackdrop = document.querySelector('.edit-modal-backdrop');
+    const modal = document.querySelector('.edit-modal');
+    const modalInput = document.querySelector('.edit-modal-input');
+    const saveButton = document.querySelector('.edit-modal-save');
+    const cancelButton = document.querySelector('.edit-modal-cancel');
+    let activeSection = null;
+
+    // Modal'ı aç
+    function openModal(section) {
+        activeSection = section;
+        const sectionText = section.querySelector('span').textContent;
+        modalInput.value = sectionText;
+        modalBackdrop.classList.add('show');
+        setTimeout(() => modal.classList.add('show'), 10);
+        modalInput.focus();
+    }
+
+    // Modal'ı kapat
+    function closeModal() {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modalBackdrop.classList.remove('show');
+            modalInput.value = '';
+        }, 200);
+    }
+
+    // Kaydet butonu
+    saveButton.addEventListener('click', () => {
+        if (activeSection && modalInput.value.trim()) {
+            activeSection.querySelector('span').textContent = modalInput.value;
+            closeModal();
+        }
+    });
+
+    // İptal butonu
+    cancelButton.addEventListener('click', closeModal);
+
+    // Modal dışına tıklama
+    modalBackdrop.addEventListener('mousedown', (e) => {
+        if (e.target === modalBackdrop) {
+            closeModal();
+        }
+    });
+
+    // Enter tuşu ile kaydet
+    modalInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter' && modalInput.value.trim()) {
+            saveButton.click();
+        }
+    });
+
+    // Escape tuşu ile kapat
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modalBackdrop.classList.contains('show')) {
+            closeModal();
+        }
+    });
+
+    addButton.addEventListener('click', function() {
+        const sectionItem = document.createElement('div');
+        sectionItem.className = 'section-item';
+        
+        const sectionText = document.createElement('span');
+        sectionText.textContent = `Bölüm ${sectionCount + 1}`;
+        
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'delete-button';
+        deleteButton.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        `;
+        
+        deleteButton.addEventListener('click', function(e) {
+            e.stopPropagation();
+            sectionItem.style.opacity = '0';
+            sectionItem.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                sectionItem.remove();
+            }, 200);
+        });
+
+        // Sadece uzun basma olayları
+        let pressTimer;
+        let isDragging = false;
+        let isPressed = false;
+
+        sectionItem.addEventListener('mousedown', (e) => {
+            isPressed = true;
+            pressTimer = setTimeout(() => {
+                if (!isDragging && isPressed) {
+                    openModal(sectionItem);
+                }
+            }, 500);
+        });
+
+        sectionItem.addEventListener('touchstart', (e) => {
+            isPressed = true;
+            pressTimer = setTimeout(() => {
+                if (!isDragging && isPressed) {
+                    openModal(sectionItem);
+                }
+            }, 500);
+        });
+
+        // Sürükleme kontrolü
+        sectionItem.addEventListener('mousemove', () => {
+            if (isPressed) {
+                isDragging = true;
+            }
+        });
+
+        // Basma iptal
+        const cancelPress = () => {
+            isPressed = false;
+            clearTimeout(pressTimer);
+            setTimeout(() => {
+                isDragging = false;
+            }, 100);
+        };
+
+        sectionItem.addEventListener('mouseup', cancelPress);
+        sectionItem.addEventListener('mouseleave', cancelPress);
+        sectionItem.addEventListener('touchend', cancelPress);
+        sectionItem.addEventListener('touchcancel', cancelPress);
+        
+        sectionItem.appendChild(sectionText);
+        sectionItem.appendChild(deleteButton);
+        sectionsWrapper.appendChild(sectionItem);
+        sectionCount++;
+        
+        sectionsWrapper.scrollLeft = sectionsWrapper.scrollWidth;
+    });
 }); 

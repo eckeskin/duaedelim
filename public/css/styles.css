@@ -253,4 +253,222 @@ html, body {
         font-size: 0.9rem;
         padding: 0.6rem 1.2rem;
     }
-} 
+}
+
+.sections-container {
+    width: 100%;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 50px;
+}
+
+.add-button {
+    width: 40px;
+    height: 40px;
+    background: #10b981;
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.add-button:hover {
+    background: #059669;
+    transform: scale(1.05);
+}
+
+.add-button:active {
+    transform: scale(0.95);
+}
+
+.sections-wrapper {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 5px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex-grow: 1;
+    width: 0;
+    min-width: 0;
+}
+
+.sections-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
+.section-item {
+    background: #e5e7eb;
+    border-radius: 20px;
+    padding: 10px 20px;
+    min-width: 120px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    color: #374151;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    gap: 10px;
+    position: relative;
+    cursor: default;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.section-item:hover {
+    background: #d1d5db;
+}
+
+.delete-button {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    padding: 0;
+    opacity: 0;
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    background: transparent;
+    color: #9ca3af;
+}
+
+.section-item:hover .delete-button {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.delete-button:hover {
+    color: #4b5563;
+}
+
+.delete-button:active {
+    transform: translateY(-50%) scale(0.9);
+    color: #374151;
+}
+
+.delete-button svg {
+    transition: all 0.2s ease;
+}
+
+.edit-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.edit-modal-backdrop.show {
+    opacity: 1;
+    display: flex;
+}
+
+.edit-modal {
+    background: white;
+    border-radius: 20px;
+    padding: 1.5rem;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    transform: scale(0.95);
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+
+.edit-modal.show {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.edit-modal-header {
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.edit-modal-title {
+    font-size: 1.2rem;
+    color: #1f2937;
+    font-weight: 600;
+    margin: 0;
+}
+
+.edit-modal-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    font-size: 1rem;
+    color: #374151;
+    transition: all 0.2s ease;
+    margin-bottom: 1.5rem;
+    outline: none;
+}
+
+.edit-modal-input:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.edit-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.edit-modal-button {
+    padding: 0.625rem 1.25rem;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.edit-modal-cancel {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.edit-modal-cancel:hover {
+    background: #e5e7eb;
+}
+
+.edit-modal-save {
+    background: #10b981;
+    color: white;
+}
+
+.edit-modal-save:hover {
+    background: #059669;
+}
+
+.edit-modal-button:active {
+    transform: scale(0.97);
+}
