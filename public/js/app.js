@@ -4,13 +4,17 @@ class CounterApp {
         this.target = 100; // Bu değer backend'den gelecek
         this.hasReachedTarget = false;
         this.userId = this.initializeUserId();
+        this.activeSection = null;
+        
+        // CounterApp instance'ına erişim için referans ekle
+        document.getElementById("count-display").__counterApp = this;
         
         // Sayfa yüklendiğinde kişisel sayacı sıfırla
         document.getElementById("personal-count").textContent = "0";
         
         // Sayfa görünürlük değişikliğini izle
         this.setupVisibilityListener();
-        
+
         this.initializeSocketEvents();
         this.initializeEventListeners();
         
@@ -105,18 +109,16 @@ class CounterApp {
     }
 
     updateCountDisplay(count) {
-        // Ana sayacı güncelle (sayıyı direkt içerik olarak ekle)
+        // Ana sayacı güncelle
         const mainDisplay = document.getElementById("count-display");
         const mainCountSpan = document.createElement("span");
         mainCountSpan.className = "main-count";
         mainCountSpan.textContent = count;
         
-        // Eğer zaten bir main-count span varsa, onu güncelle
         const existingMainCount = mainDisplay.querySelector(".main-count");
         if (existingMainCount) {
             existingMainCount.textContent = count;
         } else {
-            // Yoksa yeni span'i ekle
             mainDisplay.insertBefore(mainCountSpan, mainDisplay.firstChild);
         }
 
@@ -129,49 +131,46 @@ class CounterApp {
         if (count >= this.target && !this.hasReachedTarget) {
             this.hasReachedTarget = true;
             
-            // Kişisel sayacı hemen gizle ve pointer-events'i kapat
-            const personalCount = document.getElementById("personal-count");
-            personalCount.style.opacity = "0";
-            personalCount.style.pointerEvents = "none";
+            // Kişisel sayacı gizle
+            document.getElementById("personal-count").style.opacity = "0";
             
-            // Başarı mesajını göster
-            this.showSuccessMessage();
+            // Ana sayacı devre dışı bırak
+            document.getElementById("count-display").style.pointerEvents = "none";
             
-            // 800ms sonra sayacı otomatik sıfırla
-            setTimeout(() => {
-                this.resetCounter();
-            }, 800);
+            // Success modal'ı göster
+            document.getElementById("success-modal").style.display = "flex";
         }
-    }
-
-    showSuccessMessage() {
-        const message = document.getElementById("success-message");
-        const targetText = document.getElementById("target-input").parentElement;
-        
-        // Hedef yazısını gizle
-        targetText.style.opacity = "0";
-        
-        // Başarı mesajını göster
-        message.classList.add("show");
-        
-        // 800ms sonra mesajı gizle ve hedef yazısını göster
-        setTimeout(() => {
-            message.classList.remove("show");
-            targetText.style.opacity = "1";
-            
-            // Kişisel sayacı tekrar göster
-            document.getElementById("personal-count").style.opacity = "1";
-        }, 800);
     }
 
     initializeEventListeners() {
         document.getElementById("count-display").addEventListener("click", () => {
-            if (!this.hasReachedTarget) {
-                this.socket.emit("increment", this.userId);
+            if (!this.hasReachedTarget && this.activeSection) {
+                this.socket.emit("increment", {
+                    userId: this.userId,
+                    sectionId: this.activeSection
+                });
             }
         });
 
         document.getElementById("close-modal").addEventListener("click", () => this.resetCounter());
+        
+        // Hedef değiştirme işlemleri
+        const targetInput = document.getElementById("target-input");
+        const setTargetButton = document.getElementById("set-target");
+        
+        setTargetButton.addEventListener("click", () => {
+            const newTarget = parseInt(targetInput.value);
+            if (newTarget && newTarget > 0) {
+                this.target = newTarget;
+                this.socket.emit("setTarget", newTarget);
+            }
+        });
+        
+        targetInput.addEventListener("keyup", (e) => {
+            if (e.key === "Enter") {
+                setTargetButton.click();
+            }
+        });
         
         this.initializeUIEventListeners();
     }
@@ -204,12 +203,13 @@ class CounterApp {
     }
 
     resetCounter() {
+        if (!this.activeSection) return;
+        
         this.hasReachedTarget = false;
-        const personalCount = document.getElementById("personal-count");
-        personalCount.style.opacity = "1";
-        personalCount.style.pointerEvents = "auto";
+        document.getElementById("personal-count").style.opacity = "1";
         document.getElementById("count-display").style.pointerEvents = "auto";
-        this.socket.emit("resetCount");
+        document.getElementById("success-modal").style.display = "none";
+        this.socket.emit("resetCount", this.activeSection);
     }
 
     // Elementleri görünür yap
@@ -298,7 +298,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="edit-modal-header">
                     <h3 class="edit-modal-title">Bölüm İçeriği</h3>
                 </div>
-                <input type="text" class="edit-modal-input" placeholder="Metin girin...">
+                <input type="text" class="edit-modal-input" placeholder="Bölüm başlığı...">
+                <textarea class="edit-modal-textarea" placeholder="Zikir metni..."></textarea>
+                <div class="edit-modal-target">
+                    <label for="target-count">Hedef Sayı:</label>
+                    <input type="number" id="target-count" class="edit-modal-target-input" min="1" placeholder="100">
+                </div>
+                <div class="edit-modal-colors">
+                    <label>Sayaç Rengi:</label>
+                    <div class="color-options">
+                        <button type="button" class="color-option" data-color="#22c55e" style="background-color: #22c55e"></button>
+                        <button type="button" class="color-option" data-color="#3b82f6" style="background-color: #3b82f6"></button>
+                        <button type="button" class="color-option" data-color="#ef4444" style="background-color: #ef4444"></button>
+                        <button type="button" class="color-option" data-color="#f59e0b" style="background-color: #f59e0b"></button>
+                        <button type="button" class="color-option" data-color="#8b5cf6" style="background-color: #8b5cf6"></button>
+                        <button type="button" class="color-option" data-color="#ec4899" style="background-color: #ec4899"></button>
+                        <button type="button" class="color-option" data-color="#06b6d4" style="background-color: #06b6d4"></button>
+                        <button type="button" class="color-option" data-color="#64748b" style="background-color: #64748b"></button>
+                    </div>
+                </div>
                 <div class="edit-modal-actions">
                     <button class="edit-modal-button edit-modal-cancel">İptal</button>
                     <button class="edit-modal-button edit-modal-save">Kaydet</button>
@@ -314,15 +332,37 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalBackdrop = document.querySelector('.edit-modal-backdrop');
     const modal = document.querySelector('.edit-modal');
     const modalInput = document.querySelector('.edit-modal-input');
+    const modalTextarea = document.querySelector('.edit-modal-textarea');
+    const modalTargetInput = document.querySelector('.edit-modal-target-input');
+    const colorOptions = document.querySelectorAll('.color-option');
     const saveButton = document.querySelector('.edit-modal-save');
     const cancelButton = document.querySelector('.edit-modal-cancel');
     let activeSection = null;
+    let selectedColor = '#22c55e'; // Varsayılan renk
+
+    // Renk seçimi için event listener'lar
+    colorOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            // Önceki seçili rengi kaldır
+            document.querySelector('.color-option.selected')?.classList.remove('selected');
+            // Yeni rengi seç
+            option.classList.add('selected');
+            selectedColor = option.dataset.color;
+        });
+    });
 
     // Modal'ı aç
     function openModal(section) {
         activeSection = section;
-        const sectionText = section.querySelector('span').textContent;
-        modalInput.value = sectionText;
+        modalInput.value = section.querySelector('span').textContent;
+        modalTextarea.value = section.dataset.text || '';
+        modalTargetInput.value = section.dataset.target || '100';
+        
+        // Mevcut rengi seç
+        const currentColor = section.dataset.color || '#22c55e';
+        document.querySelector(`.color-option[data-color="${currentColor}"]`)?.classList.add('selected');
+        selectedColor = currentColor;
+        
         modalBackdrop.classList.add('show');
         setTimeout(() => modal.classList.add('show'), 10);
         modalInput.focus();
@@ -334,47 +374,29 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
             modalBackdrop.classList.remove('show');
             modalInput.value = '';
+            modalTextarea.value = '';
+            modalTargetInput.value = '100';
+            document.querySelector('.color-option.selected')?.classList.remove('selected');
+            selectedColor = '#22c55e';
         }, 200);
     }
 
-    // Kaydet butonu
-    saveButton.addEventListener('click', () => {
-        if (activeSection && modalInput.value.trim()) {
-            activeSection.querySelector('span').textContent = modalInput.value;
-            closeModal();
-        }
-    });
-
-    // İptal butonu
-    cancelButton.addEventListener('click', closeModal);
-
-    // Modal dışına tıklama
-    modalBackdrop.addEventListener('mousedown', (e) => {
-        if (e.target === modalBackdrop) {
-            closeModal();
-        }
-    });
-
-    // Enter tuşu ile kaydet
-    modalInput.addEventListener('keyup', (e) => {
-        if (e.key === 'Enter' && modalInput.value.trim()) {
-            saveButton.click();
-        }
-    });
-
-    // Escape tuşu ile kapat
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modalBackdrop.classList.contains('show')) {
-            closeModal();
-        }
-    });
-
-    addButton.addEventListener('click', function() {
+    // Bölüm elementi oluşturma fonksiyonu
+    function createSectionElement(section) {
         const sectionItem = document.createElement('div');
         sectionItem.className = 'section-item';
+        sectionItem.dataset.id = section._id;
+        sectionItem.dataset.text = section.text || '';
+        sectionItem.dataset.target = section.target || 100;
+        sectionItem.dataset.color = section.color || '#22c55e';
         
         const sectionText = document.createElement('span');
-        sectionText.textContent = `Bölüm ${sectionCount + 1}`;
+        sectionText.textContent = section.title;
+
+        // Renk göstergesi ekle
+        const colorIndicator = document.createElement('div');
+        colorIndicator.className = 'color-indicator';
+        colorIndicator.style.backgroundColor = section.color || '#22c55e';
         
         const deleteButton = document.createElement('button');
         deleteButton.className = 'delete-button';
@@ -383,17 +405,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         `;
-        
-        deleteButton.addEventListener('click', function(e) {
-            e.stopPropagation();
-            sectionItem.style.opacity = '0';
-            sectionItem.style.transform = 'scale(0.9)';
-            setTimeout(() => {
-                sectionItem.remove();
-            }, 200);
-        });
 
-        // Sadece uzun basma olayları
+        // Uzun basma olayları
         let pressTimer;
         let isDragging = false;
         let isPressed = false;
@@ -416,6 +429,50 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 500);
         });
 
+        // Bölüme tıklandığında shahada metnini, hedefi ve rengi güncelle
+        sectionItem.addEventListener('click', (e) => {
+            if (!e.target.closest('.delete-button')) {
+                const shahada = document.querySelector('.shahada');
+                if (shahada) {
+                    shahada.textContent = sectionItem.dataset.text || '';
+                }
+                
+                const targetValue = parseInt(sectionItem.dataset.target) || 100;
+                const color = sectionItem.dataset.color || '#22c55e';
+                
+                // Hedefi güncelle
+                document.getElementById('target-input').textContent = targetValue.toLocaleString();
+                
+                // CounterApp instance'ını güncelle
+                const counterApp = document.querySelector('#count-display').__counterApp;
+                if (counterApp) {
+                    counterApp.target = targetValue;
+                    counterApp.activeSection = sectionItem.dataset.id;
+                    
+                    // Renkleri güncelle
+                    const countDisplay = document.getElementById('count-display');
+                    const progressBar = document.getElementById('progress-bar');
+                    const personalCount = document.getElementById('personal-count');
+                    
+                    countDisplay.style.color = color;
+                    progressBar.style.backgroundColor = color;
+                    personalCount.style.backgroundColor = color;
+                    countDisplay.style.background = `${color}1a`; // Rengin açık tonu için
+                    
+                    // Socket'e aktif bölümü bildir
+                    counterApp.socket.emit('setActiveSection', sectionItem.dataset.id);
+                }
+                
+                // Aktif bölümü güncelle
+                document.querySelectorAll('.section-item').forEach(item => {
+                    item.classList.remove('active');
+                    item.style.setProperty('--section-color', '');
+                });
+                sectionItem.classList.add('active');
+                sectionItem.style.setProperty('--section-color', color);
+            }
+        });
+
         // Sürükleme kontrolü
         sectionItem.addEventListener('mousemove', () => {
             if (isPressed) {
@@ -436,12 +493,161 @@ document.addEventListener('DOMContentLoaded', function() {
         sectionItem.addEventListener('mouseleave', cancelPress);
         sectionItem.addEventListener('touchend', cancelPress);
         sectionItem.addEventListener('touchcancel', cancelPress);
+
+        // Silme butonu olayı
+        deleteButton.addEventListener('click', async function(e) {
+            e.stopPropagation();
+            try {
+                const response = await fetch(`/api/sections/${section._id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) throw new Error('Bölüm silinemedi');
+                
+                sectionItem.style.opacity = '0';
+                sectionItem.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    sectionItem.remove();
+                }, 200);
+            } catch (err) {
+                console.error('Bölüm silinirken hata:', err);
+            }
+        });
         
+        // Elementleri doğru sırayla ekle
+        sectionItem.appendChild(colorIndicator);
         sectionItem.appendChild(sectionText);
         sectionItem.appendChild(deleteButton);
-        sectionsWrapper.appendChild(sectionItem);
-        sectionCount++;
-        
-        sectionsWrapper.scrollLeft = sectionsWrapper.scrollWidth;
+        return sectionItem;
+    }
+
+    // Kaydet butonu
+    saveButton.addEventListener('click', async () => {
+        if (activeSection && modalInput.value.trim()) {
+            try {
+                const targetValue = parseInt(modalTargetInput.value) || 100;
+                const response = await fetch(`/api/sections/${activeSection.dataset.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        title: modalInput.value,
+                        text: modalTextarea.value,
+                        target: targetValue,
+                        color: selectedColor
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Bölüm güncellenemedi');
+                
+                const updatedSection = await response.json();
+                activeSection.querySelector('span').textContent = updatedSection.title;
+                activeSection.dataset.text = updatedSection.text;
+                activeSection.dataset.target = updatedSection.target;
+                activeSection.dataset.color = updatedSection.color;
+                activeSection.querySelector('.color-indicator').style.backgroundColor = updatedSection.color;
+                
+                // Eğer aktif bölüm ise tüm değerleri güncelle
+                if (activeSection.classList.contains('active')) {
+                    const shahada = document.querySelector('.shahada');
+                    if (shahada) {
+                        shahada.textContent = updatedSection.text;
+                    }
+                    
+                    // Hedefi ve renkleri güncelle
+                    document.getElementById('target-input').textContent = updatedSection.target.toLocaleString();
+                    const countDisplay = document.getElementById('count-display');
+                    const progressBar = document.getElementById('progress-bar');
+                    countDisplay.style.color = updatedSection.color;
+                    progressBar.style.backgroundColor = updatedSection.color;
+                    
+                    // CounterApp instance'ını güncelle
+                    const counterApp = document.querySelector('#count-display').__counterApp;
+                    if (counterApp) {
+                        counterApp.target = updatedSection.target;
+                        counterApp.activeSection = updatedSection._id;
+                        counterApp.socket.emit('setActiveSection', updatedSection._id);
+                    }
+                }
+                
+                closeModal();
+            } catch (err) {
+                console.error('Bölüm güncellenirken hata:', err);
+            }
+        }
     });
+
+    addButton.addEventListener('click', async function() {
+        const sectionCount = sectionsWrapper.children.length;
+        const title = `Bölüm ${sectionCount + 1}`;
+        
+        try {
+            // Yeni bölümü API'ye gönder
+            const response = await fetch('/api/sections', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    title,
+                    text: '',
+                    target: 100,
+                    color: '#22c55e' // Her zaman varsayılan renk ile başla
+                })
+            });
+            
+            const section = await response.json();
+            if (!response.ok) throw new Error(section.error);
+            
+            // Bölümü UI'a ekle
+            const sectionItem = createSectionElement(section);
+            sectionsWrapper.appendChild(sectionItem);
+            sectionsWrapper.scrollLeft = sectionsWrapper.scrollWidth;
+
+            // Yeni eklenen bölümü otomatik olarak aktif yap
+            sectionItem.click();
+        } catch (err) {
+            console.error('Bölüm eklenirken hata:', err);
+        }
+    });
+
+    // Modal event listener'ları
+    cancelButton.addEventListener('click', closeModal);
+
+    modalBackdrop.addEventListener('mousedown', (e) => {
+        if (e.target === modalBackdrop) {
+            closeModal();
+        }
+    });
+
+    modalInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter' && modalInput.value.trim()) {
+            saveButton.click();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modalBackdrop.classList.contains('show')) {
+            closeModal();
+        }
+    });
+
+    // Sayfa yüklendiğinde mevcut bölümleri getir
+    async function loadSections() {
+        try {
+            const response = await fetch('/api/sections');
+            const sections = await response.json();
+            
+            sections.forEach(section => {
+                const sectionElement = createSectionElement(section);
+                sectionsWrapper.appendChild(sectionElement);
+            });
+        } catch (err) {
+            console.error('Bölümler yüklenirken hata:', err);
+        }
+    }
+
+    // Bölümleri yükle
+    loadSections();
 }); 

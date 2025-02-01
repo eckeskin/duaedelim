@@ -36,8 +36,8 @@
          }
       </style>
    </head>
-   <body class="bg-gradient-to-br from-blue-100 to-blue-300 flex items-center justify-center min-h-screen">
-      <div class="container">
+   <body class="bg-green-200 flex flex-col items-center justify-center min-h-screen">
+      <div class="app-container">
          <div class="sections-container">
             <button id="add-section" class="add-button">
                <span>+</span>
@@ -47,36 +47,48 @@
             </div>
          </div>
 
-         <div class="arabic-text">
-            إِنَّا لِلّهِ وَإِنَّـا إِلَيْهِ رَاجِعونَ
-         </div>
-         <div class="transliteration">
-            İnna lillâhi ve innâ ileyhi râciûn
-         </div>
-         <div class="shahada">
-            Lâ ilâhe illâllah, Muhammedün Rasûlullah
-         </div>
-         <div class="target-text">
-            Hedef: <span id="target-input">25</span>
-         </div>
-         
-         <div id="count-display">
-            <span class="main-count">0</span>
-            <span id="personal-count">0</span>
-         </div>
-         
-         <div class="progress-container">
-            <div id="progress-bar"></div>
-         </div>
-         <div id="progress-text">0%</div>
-         
-         <div class="online-container">
-            <span class="online-dot"></span>
-            Online: <span id="online-count">0</span>
-         </div>
+         <div class="container">
+            <div class="arabic-text">
+               بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+            </div>
+            
+            <div class="shahada long-text">
+               Rabbi innî messeniye'd-durru ve ente erhamur-râhimîn
+            </div>
+            
+            <div class="target-input-container">
+                <label for="target-input">Hedef:</label>
+                <input type="number" id="target-input" min="1" value="100" class="target-input">
+                <button id="set-target" class="set-target-button">Ayarla</button>
+            </div>
+            
+            <div id="count-display">
+               <span class="main-count">0</span>
+               <span id="personal-count">0</span>
+            </div>
+            
+            <div class="progress-container">
+               <div id="progress-bar"></div>
+            </div>
+            <div id="progress-text">0%</div>
+            
+            <div class="online-container">
+               <span class="online-dot"></span>
+               Online: <span id="online-count">0</span>
+            </div>
 
-         <!-- Geçici başarı mesajı -->
-         <div id="success-message" class="success-message">✨ Hedefe ulaşıldı ✨</div>
+            <!-- Başarı mesajı -->
+            <div id="success-message" class="success-message">✨ Hedefe ulaşıldı ✨</div>
+         </div>
+      </div>
+
+      <!-- Başarı Modal -->
+      <div id="success-modal" class="success-modal">
+         <div class="modal-content">
+            <h2>🎉 Tebrikler!</h2>
+            <p>Hedefe ulaşıldı!</p>
+            <button id="close-modal">Tamam</button>
+         </div>
       </div>
 
       <script src="/socket.io/socket.io.js"></script>
