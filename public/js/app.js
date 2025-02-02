@@ -5,6 +5,9 @@ class CounterApp {
         this.hasReachedTarget = false;
         this.userId = this.initializeUserId();
         this.activeSection = null;
+        this.lastActiveSection = null;
+        this.personalCount = 0;
+        this.lastCount = 0; // Son sayaç değerini sakla
         
         // CounterApp instance'ına erişim için referans ekle
         document.getElementById("count-display").__counterApp = this;
@@ -31,7 +34,10 @@ class CounterApp {
                     this.socket.connect();
                 }
                 
-                // Güncel durumu almak için sunucuya istek gönder
+                // Aktif bölümü ve hedefi koruyarak güncel durumu al
+                if (this.activeSection) {
+                    this.socket.emit('setActiveSection', this.activeSection);
+                }
                 this.socket.emit('requestUpdate');
             }
         });
@@ -39,17 +45,24 @@ class CounterApp {
         // Ekran açıldığında da kontrol et (iOS için)
         window.addEventListener('focus', () => {
             console.log('📱 Ekran odağı alındı, güncel durumu alınıyor...');
+            // Aktif bölümü ve hedefi koruyarak güncel durumu al
+            if (this.activeSection) {
+                this.socket.emit('setActiveSection', this.activeSection);
+            }
             this.socket.emit('requestUpdate');
         });
 
         // Ağ bağlantısı değişikliklerini izle
         window.addEventListener('online', () => {
             console.log('🌐 İnternet bağlantısı sağlandı, güncel durumu alınıyor...');
-            if (this.socket.connected) {
-                this.socket.emit('requestUpdate');
-            } else {
+            if (!this.socket.connected) {
                 this.socket.connect();
             }
+            // Aktif bölümü ve hedefi koruyarak güncel durumu al
+            if (this.activeSection) {
+                this.socket.emit('setActiveSection', this.activeSection);
+            }
+            this.socket.emit('requestUpdate');
         });
     }
 
@@ -64,6 +77,7 @@ class CounterApp {
 
     initializeSocketEvents() {
         // Önce kişisel sayacı sıfırla, sonra kullanıcı kaydı yap
+        this.personalCount = 0;
         document.getElementById("personal-count").textContent = "0";
         this.socket.emit("registerUser", this.userId);
 
@@ -71,6 +85,13 @@ class CounterApp {
         this.socket.on("config", (config) => {
             this.target = config.TARGET_COUNT;
             document.getElementById("target-input").textContent = this.target.toLocaleString();
+            
+            // Son sayaç değeri varsa progress bar'ı güncelle
+            if (this.lastCount > 0) {
+                const progress = (this.lastCount / this.target) * 100;
+                document.getElementById("progress-bar").style.width = `${progress}%`;
+                document.getElementById("progress-text").textContent = `${Math.round(progress)}%`;
+            }
             
             // Renkleri güncelle
             if (config.color) {
@@ -106,18 +127,26 @@ class CounterApp {
         });
 
         this.socket.on("personalCount", (count) => {
-            document.getElementById("personal-count").textContent = count;
-            this.showElements(); // Kişisel sayaç geldiğinde göster
+            // Sadece aktif bölüm değişmediyse sayacı güncelle
+            if (this.lastActiveSection === this.activeSection) {
+                this.personalCount = count;
+                document.getElementById("personal-count").textContent = count;
+            }
+            this.showElements();
         });
 
         // Yeniden bağlanma durumunda
         this.socket.on("connect", () => {
+            this.personalCount = 0;
             document.getElementById("personal-count").textContent = "0";
             this.socket.emit("registerUser", this.userId);
         });
     }
 
     updateCountDisplay(count) {
+        // Son sayaç değerini sakla
+        this.lastCount = count;
+        
         // Ana sayacı güncelle
         const mainDisplay = document.getElementById("count-display");
         const mainCountSpan = document.createElement("span");
@@ -133,8 +162,14 @@ class CounterApp {
 
         // Progress bar ve yüzdeyi güncelle
         const progress = (count / this.target) * 100;
-        document.getElementById("progress-bar").style.width = `${progress}%`;
-        document.getElementById("progress-text").textContent = `${Math.round(progress)}%`;
+        const progressBar = document.getElementById("progress-bar");
+        const progressText = document.getElementById("progress-text");
+        
+        // Animasyonlu geçiş için
+        progressBar.style.transition = 'width 0.3s ease';
+        progressBar.style.width = `${progress}%`;
+        progressText.textContent = `${Math.round(progress)}%`;
+        progressText.style.opacity = "1";
 
         // Hedefe ulaşıldığında
         if (count >= this.target && !this.hasReachedTarget) {
@@ -161,6 +196,9 @@ class CounterApp {
                     userId: this.userId,
                     sectionId: this.activeSection
                 });
+                // Kişisel sayacı güncelle
+                this.personalCount++;
+                document.getElementById("personal-count").textContent = this.personalCount;
             }
         });
 
@@ -200,10 +238,19 @@ class CounterApp {
         if (!this.activeSection) return;
         
         this.hasReachedTarget = false;
-        document.getElementById("personal-count").style.opacity = "1";
+        // Kişisel sayacı sıfırla ve görünür yap
+        this.personalCount = 0;
+        const personalCountElement = document.getElementById("personal-count");
+        personalCountElement.textContent = "0";
+        personalCountElement.style.opacity = "1";
+        
+        // Ana sayacı aktif hale getir
         document.getElementById("count-display").style.pointerEvents = "auto";
         document.getElementById("success-modal").style.display = "none";
+        
+        // Socket'e bildir
         this.socket.emit("resetCount", this.activeSection);
+        this.socket.emit("resetPersonalCount");
     }
 
     // Elementleri görünür yap
@@ -238,6 +285,26 @@ class CounterApp {
             });
         }
     }
+
+    // Bölüm değiştiğinde kişisel sayacı sıfırla
+    resetPersonalCounter() {
+        this.personalCount = 0;
+        document.getElementById("personal-count").textContent = "0";
+        this.socket.emit("resetPersonalCount");
+    }
+
+    // Aktif bölümü değiştir
+    setActiveSection(sectionId) {
+        if (this.activeSection !== sectionId) {
+            this.lastActiveSection = this.activeSection;
+            this.activeSection = sectionId;
+            
+            // Kişisel sayacı sıfırla
+            this.personalCount = 0;
+            document.getElementById("personal-count").textContent = "0";
+            this.socket.emit("resetPersonalCount");
+        }
+    }
 }
 
 // Uygulama başlatma
@@ -270,6 +337,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const x = e.pageX - sectionsWrapper.offsetLeft;
         const walk = (x - startX) * 1.5;
         sectionsWrapper.scrollLeft = scrollLeft - walk;
+        // Scroll pozisyonunu kaydet
+        localStorage.setItem('sectionsScrollPosition', sectionsWrapper.scrollLeft);
     });
 
     sectionsWrapper.addEventListener('mouseup', () => {
@@ -280,6 +349,16 @@ document.addEventListener('DOMContentLoaded', function() {
     sectionsWrapper.addEventListener('mouseleave', () => {
         isScrolling = false;
         sectionsWrapper.style.cursor = 'grab';
+    });
+
+    // Touch olayları için scroll pozisyonunu kaydet
+    sectionsWrapper.addEventListener('touchend', () => {
+        localStorage.setItem('sectionsScrollPosition', sectionsWrapper.scrollLeft);
+    });
+
+    // Scroll olayında pozisyonu kaydet
+    sectionsWrapper.addEventListener('scroll', () => {
+        localStorage.setItem('sectionsScrollPosition', sectionsWrapper.scrollLeft);
     });
 
     // Başlangıçta cursor'ı grab yap
@@ -314,6 +393,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="edit-modal-actions">
                     <button class="edit-modal-button edit-modal-cancel">İptal</button>
                     <button class="edit-modal-button edit-modal-save">Kaydet</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="delete-modal-backdrop">
+            <div class="delete-modal" onclick="event.stopPropagation()">
+                <div class="delete-modal-header">
+                    <h3 class="delete-modal-title">Bölümü Sil</h3>
+                </div>
+                <p class="delete-modal-text">Bu bölümü silmek istediğinizden emin misiniz?</p>
+                <div class="delete-modal-actions">
+                    <button class="delete-modal-button delete-modal-cancel">İptal</button>
+                    <button class="delete-modal-button delete-modal-confirm">Sil</button>
                 </div>
             </div>
         </div>
@@ -375,6 +467,53 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 200);
     }
 
+    // Silme modalı için elementleri seç
+    const deleteModalBackdrop = document.querySelector('.delete-modal-backdrop');
+    const deleteModal = document.querySelector('.delete-modal');
+    const deleteConfirmButton = document.querySelector('.delete-modal-confirm');
+    const deleteCancelButton = document.querySelector('.delete-modal-cancel');
+    let sectionToDelete = null;
+
+    // Silme modalını aç
+    function openDeleteModal(section) {
+        sectionToDelete = section;
+        deleteModalBackdrop.classList.add('show');
+        setTimeout(() => deleteModal.classList.add('show'), 10);
+    }
+
+    // Silme modalını kapat
+    function closeDeleteModal() {
+        deleteModal.classList.remove('show');
+        setTimeout(() => {
+            deleteModalBackdrop.classList.remove('show');
+            sectionToDelete = null;
+        }, 200);
+    }
+
+    // Silme modalı event listener'ları
+    deleteCancelButton.addEventListener('click', closeDeleteModal);
+    deleteModalBackdrop.addEventListener('mousedown', (e) => {
+        if (e.target === deleteModalBackdrop) {
+            closeDeleteModal();
+        }
+    });
+
+    deleteConfirmButton.addEventListener('click', async () => {
+        if (sectionToDelete) {
+            try {
+                await fetch(`/api/sections/${sectionToDelete.dataset.id}`, {
+                    method: 'DELETE'
+                });
+                sectionToDelete.style.opacity = '0';
+                sectionToDelete.style.transform = 'scale(0.9)';
+                setTimeout(() => sectionToDelete.remove(), 200);
+                closeDeleteModal();
+            } catch (err) {
+                console.error('Bölüm silinirken hata:', err);
+            }
+        }
+    });
+
     // Bölüm elementi oluşturma fonksiyonu
     function createSectionElement(section) {
         const sectionItem = document.createElement('div');
@@ -397,17 +536,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function startPress() {
             pressTimer = setTimeout(() => {
-                // Bölümü sil
-                fetch(`/api/sections/${section._id}`, {
-                    method: 'DELETE'
-                }).then(() => {
-                    sectionItem.style.opacity = '0';
-                    sectionItem.style.transform = 'scale(0.9)';
-                    setTimeout(() => sectionItem.remove(), 200);
-                }).catch(err => {
-                    console.error('Bölüm silinirken hata:', err);
-                });
-            }, 500);
+                openDeleteModal(sectionItem);
+            }, 1000);
         }
 
         function cancelPress() {
@@ -449,6 +579,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const counterApp = document.querySelector('#count-display').__counterApp;
             if (counterApp) {
                 counterApp.target = targetValue;
+                
+                // Kişisel sayacı sıfırla ve aktif bölümü güncelle
+                counterApp.personalCount = 0;
+                document.getElementById('personal-count').textContent = '0';
                 counterApp.activeSection = sectionItem.dataset.id;
                 
                 // Renkleri güncelle
@@ -461,8 +595,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 personalCount.style.backgroundColor = color;
                 countDisplay.style.background = `${color}1a`; // Rengin açık tonu için
                 
-                // Socket'e aktif bölümü bildir
+                // Socket'e aktif bölümü bildir ve kişisel sayacı sıfırla
                 counterApp.socket.emit('setActiveSection', sectionItem.dataset.id);
+                counterApp.socket.emit('resetPersonalCount');
                 
                 // Aktif bölümü API'ye kaydet
                 try {
@@ -656,19 +791,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (shahada) {
                         shahada.textContent = section.text || '';
                     }
-
-                    // Aktif bölümü görünür yap
-                    setTimeout(() => {
-                        const sectionRect = sectionElement.getBoundingClientRect();
-                        const containerRect = sectionsWrapper.getBoundingClientRect();
-                        const scrollLeft = sectionRect.left - containerRect.left - 10; // 10px boşluk bırak
-                        sectionsWrapper.scrollTo({
-                            left: scrollLeft,
-                            behavior: 'smooth'
-                        });
-                    }, 100);
                 }
             });
+
+            // Kaydedilmiş scroll pozisyonunu geri yükle
+            const savedScrollPosition = localStorage.getItem('sectionsScrollPosition');
+            if (savedScrollPosition !== null) {
+                sectionsWrapper.scrollLeft = parseInt(savedScrollPosition);
+            }
         } catch (err) {
             console.error('Bölümler yüklenirken hata:', err);
         }

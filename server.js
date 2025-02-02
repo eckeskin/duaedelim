@@ -11,15 +11,29 @@ const mongoose = require('mongoose');
 const Counter = require('./models/Counter');
 const Section = require('./models/Section');
 
-// MongoDB bağlantısı
-mongoose.connect('mongodb://localhost:27017/dhikr_counter', {
+// MongoDB bağlantısı için environment variable kullan
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/counter';
+
+// MongoDB bağlantı seçenekleri
+const mongooseOptions = {
     useNewUrlParser: true,
-    useUnifiedTopology: true
-}).then(() => {
-    console.log('MongoDB bağlantısı başarılı');
-}).catch((err) => {
-    console.error('MongoDB bağlantı hatası:', err);
-});
+    useUnifiedTopology: true,
+    retryWrites: true,
+    w: 'majority'
+};
+
+// MongoDB bağlantısı
+mongoose.connect(MONGODB_URI, mongooseOptions)
+    .then(() => {
+        console.log('📦 MongoDB bağlantısı başarılı');
+    })
+    .catch((err) => {
+        console.error('MongoDB bağlantı hatası:', err);
+    });
+
+// Global değişkenler
+let currentCounter;
+const onlineUsers = new Set();
 
 class App {
     constructor() {
@@ -260,10 +274,6 @@ class App {
         });
     }
 }
-
-// Global değişkenler
-let onlineUsers = new Set();
-let currentCounter = null;
 
 const app = new App();
 app.start(); 

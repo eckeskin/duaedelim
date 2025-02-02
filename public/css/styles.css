@@ -744,3 +744,91 @@ html, body {
 .delete-zone span {
     display: none;
 }
+
+.delete-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.delete-modal-backdrop.show {
+    opacity: 1;
+    display: flex;
+}
+
+.delete-modal {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    width: 90%;
+    max-width: 320px;
+    transform: scale(0.9);
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+
+.delete-modal.show {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.delete-modal-header {
+    margin-bottom: 16px;
+}
+
+.delete-modal-title {
+    color: #1f2937;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.delete-modal-text {
+    color: #4b5563;
+    font-size: 14px;
+    margin: 0 0 20px 0;
+}
+
+.delete-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.delete-modal-button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.delete-modal-cancel {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.delete-modal-cancel:hover {
+    background: #e5e7eb;
+}
+
+.delete-modal-confirm {
+    background: #ef4444;
+    color: white;
+}
+
+.delete-modal-confirm:hover {
+    background: #dc2626;
+}
