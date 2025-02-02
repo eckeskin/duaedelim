@@ -1,3 +1,7 @@
+:root {
+    --section-color: #22c55e;
+}
+
 html, body {
     margin: 0;
     padding: 0;
@@ -12,6 +16,7 @@ html, body {
 
 .container {
     width: 100%;
+    min-width: 400px;
     max-width: 400px;
     margin: 0;
     background: white;
@@ -235,8 +240,9 @@ html, body {
     }
 
     .container {
-        padding: 1.5rem;
+        min-width: 100%;
         margin: 0;
+        border-radius: 24px;
     }
 
     .add-button {
@@ -246,7 +252,7 @@ html, body {
     }
 
     .section-item {
-        min-width: 100px;
+        min-width: 110px;
         height: 35px;
         padding: 8px 16px;
         font-size: 13px;
@@ -366,27 +372,48 @@ html, body {
 }
 
 .section-item {
-    background: #e5e7eb;
-    border-radius: 20px;
-    padding: 10px 20px;
-    min-width: 120px;
-    height: 40px;
+    position: relative;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    font-size: 14px;
-    color: #374151;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-    gap: 10px;
-    position: relative;
-    cursor: default;
+    padding: 8px 16px;
+    background: white;
+    border-radius: 8px;
+    margin-right: 10px;
+    cursor: pointer;
     user-select: none;
-    -webkit-user-select: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    min-width: 120px;
+    height: 35px;
+    font-size: 13px;
+}
+
+.section-item.active {
+    background: #f8fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .section-item:hover {
     background: #d1d5db;
+}
+
+.section-item span {
+    flex-grow: 1;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.color-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    flex-shrink: 0;
+    border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .delete-button {
@@ -554,6 +581,12 @@ html, body {
     font-size: 1rem;
 }
 
+.target-display {
+    color: #374151;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
 .target-input {
     width: 100px;
     padding: 8px 12px;
@@ -606,17 +639,6 @@ html, body {
     resize: vertical;
 }
 
-.section-item {
-    position: relative;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.section-item.active {
-    background-color: #f0f0f0;
-    border-color: #007bff;
-}
-
 .edit-modal-target {
     margin: 10px 0;
     display: flex;
@@ -667,20 +689,6 @@ html, body {
     cursor: pointer;
 }
 
-.color-indicator {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 8px;
-    flex-shrink: 0;
-}
-
-.section-item {
-    display: flex;
-    align-items: center;
-    padding-left: 12px;
-}
-
 .edit-modal-colors {
     margin: 10px 0;
 }
@@ -717,11 +725,22 @@ html, body {
     transform: scale(1.1);
 }
 
-.color-indicator {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 8px;
-    flex-shrink: 0;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+.delete-zone {
+    display: none;
+}
+
+.delete-zone.show {
+    display: none;
+}
+
+.delete-zone.active {
+    display: none;
+}
+
+.delete-zone svg {
+    display: none;
+}
+
+.delete-zone span {
+    display: none;
 }

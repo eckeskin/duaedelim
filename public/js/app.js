@@ -1,7 +1,7 @@
 class CounterApp {
     constructor() {
         this.socket = io();
-        this.target = 100; // Bu değer backend'den gelecek
+        this.target = 100;
         this.hasReachedTarget = false;
         this.userId = this.initializeUserId();
         this.activeSection = null;
@@ -17,9 +17,6 @@ class CounterApp {
 
         this.initializeSocketEvents();
         this.initializeEventListeners();
-        
-        // Hedef sayıyı güncelle
-        document.getElementById("target-input").textContent = this.target.toLocaleString();
     }
 
     setupVisibilityListener() {
@@ -74,6 +71,18 @@ class CounterApp {
         this.socket.on("config", (config) => {
             this.target = config.TARGET_COUNT;
             document.getElementById("target-input").textContent = this.target.toLocaleString();
+            
+            // Renkleri güncelle
+            if (config.color) {
+                const countDisplay = document.getElementById('count-display');
+                const progressBar = document.getElementById('progress-bar');
+                const personalCount = document.getElementById('personal-count');
+                
+                countDisplay.style.color = config.color;
+                progressBar.style.backgroundColor = config.color;
+                personalCount.style.backgroundColor = config.color;
+                countDisplay.style.background = `${config.color}1a`;
+            }
         });
 
         this.socket.on("onlineCount", (count) => {
@@ -143,7 +152,10 @@ class CounterApp {
     }
 
     initializeEventListeners() {
-        document.getElementById("count-display").addEventListener("click", () => {
+        document.getElementById("count-display").addEventListener("click", (e) => {
+            // Eğer inspect modunda ise (F12 veya sağ tık + incele) tıklamayı engelle
+            if (e.isTrusted === false) return;
+
             if (!this.hasReachedTarget && this.activeSection) {
                 this.socket.emit("increment", {
                     userId: this.userId,
@@ -153,24 +165,6 @@ class CounterApp {
         });
 
         document.getElementById("close-modal").addEventListener("click", () => this.resetCounter());
-        
-        // Hedef değiştirme işlemleri
-        const targetInput = document.getElementById("target-input");
-        const setTargetButton = document.getElementById("set-target");
-        
-        setTargetButton.addEventListener("click", () => {
-            const newTarget = parseInt(targetInput.value);
-            if (newTarget && newTarget > 0) {
-                this.target = newTarget;
-                this.socket.emit("setTarget", newTarget);
-            }
-        });
-        
-        targetInput.addEventListener("keyup", (e) => {
-            if (e.key === "Enter") {
-                setTargetButton.click();
-            }
-        });
         
         this.initializeUIEventListeners();
     }
@@ -397,127 +391,101 @@ document.addEventListener('DOMContentLoaded', function() {
         const colorIndicator = document.createElement('div');
         colorIndicator.className = 'color-indicator';
         colorIndicator.style.backgroundColor = section.color || '#22c55e';
-        
-        const deleteButton = document.createElement('button');
-        deleteButton.className = 'delete-button';
-        deleteButton.innerHTML = `
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        `;
 
-        // Uzun basma olayları
+        // Basılı tutma ile silme
         let pressTimer;
-        let isDragging = false;
-        let isPressed = false;
 
-        sectionItem.addEventListener('mousedown', (e) => {
-            isPressed = true;
+        function startPress() {
             pressTimer = setTimeout(() => {
-                if (!isDragging && isPressed) {
-                    openModal(sectionItem);
-                }
-            }, 500);
-        });
-
-        sectionItem.addEventListener('touchstart', (e) => {
-            isPressed = true;
-            pressTimer = setTimeout(() => {
-                if (!isDragging && isPressed) {
-                    openModal(sectionItem);
-                }
-            }, 500);
-        });
-
-        // Bölüme tıklandığında shahada metnini, hedefi ve rengi güncelle
-        sectionItem.addEventListener('click', (e) => {
-            if (!e.target.closest('.delete-button')) {
-                const shahada = document.querySelector('.shahada');
-                if (shahada) {
-                    shahada.textContent = sectionItem.dataset.text || '';
-                }
-                
-                const targetValue = parseInt(sectionItem.dataset.target) || 100;
-                const color = sectionItem.dataset.color || '#22c55e';
-                
-                // Hedefi güncelle
-                document.getElementById('target-input').textContent = targetValue.toLocaleString();
-                
-                // CounterApp instance'ını güncelle
-                const counterApp = document.querySelector('#count-display').__counterApp;
-                if (counterApp) {
-                    counterApp.target = targetValue;
-                    counterApp.activeSection = sectionItem.dataset.id;
-                    
-                    // Renkleri güncelle
-                    const countDisplay = document.getElementById('count-display');
-                    const progressBar = document.getElementById('progress-bar');
-                    const personalCount = document.getElementById('personal-count');
-                    
-                    countDisplay.style.color = color;
-                    progressBar.style.backgroundColor = color;
-                    personalCount.style.backgroundColor = color;
-                    countDisplay.style.background = `${color}1a`; // Rengin açık tonu için
-                    
-                    // Socket'e aktif bölümü bildir
-                    counterApp.socket.emit('setActiveSection', sectionItem.dataset.id);
-                }
-                
-                // Aktif bölümü güncelle
-                document.querySelectorAll('.section-item').forEach(item => {
-                    item.classList.remove('active');
-                    item.style.setProperty('--section-color', '');
+                // Bölümü sil
+                fetch(`/api/sections/${section._id}`, {
+                    method: 'DELETE'
+                }).then(() => {
+                    sectionItem.style.opacity = '0';
+                    sectionItem.style.transform = 'scale(0.9)';
+                    setTimeout(() => sectionItem.remove(), 200);
+                }).catch(err => {
+                    console.error('Bölüm silinirken hata:', err);
                 });
-                sectionItem.classList.add('active');
-                sectionItem.style.setProperty('--section-color', color);
+            }, 500);
+        }
+
+        function cancelPress() {
+            if (pressTimer) {
+                clearTimeout(pressTimer);
+                pressTimer = null;
             }
-        });
+        }
 
-        // Sürükleme kontrolü
-        sectionItem.addEventListener('mousemove', () => {
-            if (isPressed) {
-                isDragging = true;
-            }
-        });
-
-        // Basma iptal
-        const cancelPress = () => {
-            isPressed = false;
-            clearTimeout(pressTimer);
-            setTimeout(() => {
-                isDragging = false;
-            }, 100);
-        };
-
+        sectionItem.addEventListener('mousedown', startPress);
+        sectionItem.addEventListener('touchstart', startPress);
         sectionItem.addEventListener('mouseup', cancelPress);
         sectionItem.addEventListener('mouseleave', cancelPress);
         sectionItem.addEventListener('touchend', cancelPress);
         sectionItem.addEventListener('touchcancel', cancelPress);
 
-        // Silme butonu olayı
-        deleteButton.addEventListener('click', async function(e) {
-            e.stopPropagation();
-            try {
-                const response = await fetch(`/api/sections/${section._id}`, {
-                    method: 'DELETE'
-                });
-                
-                if (!response.ok) throw new Error('Bölüm silinemedi');
-                
-                sectionItem.style.opacity = '0';
-                sectionItem.style.transform = 'scale(0.9)';
-                setTimeout(() => {
-                    sectionItem.remove();
-                }, 200);
-            } catch (err) {
-                console.error('Bölüm silinirken hata:', err);
+        // Çift tıklama ile modalı aç
+        sectionItem.addEventListener('dblclick', () => {
+            openModal(sectionItem);
+        });
+
+        // Bölüme tıklandığında shahada metnini, hedefi ve rengi güncelle
+        sectionItem.addEventListener('click', async (e) => {
+            // Eğer inspect modunda ise (F12 veya sağ tık + incele) tıklamayı engelle
+            if (e.isTrusted === false) return;
+
+            const shahada = document.querySelector('.shahada');
+            if (shahada) {
+                shahada.textContent = sectionItem.dataset.text || '';
             }
+            
+            const targetValue = parseInt(sectionItem.dataset.target) || 100;
+            const color = sectionItem.dataset.color || '#22c55e';
+            
+            // Hedefi güncelle
+            document.getElementById('target-input').textContent = targetValue.toLocaleString();
+            
+            // CounterApp instance'ını güncelle
+            const counterApp = document.querySelector('#count-display').__counterApp;
+            if (counterApp) {
+                counterApp.target = targetValue;
+                counterApp.activeSection = sectionItem.dataset.id;
+                
+                // Renkleri güncelle
+                const countDisplay = document.getElementById('count-display');
+                const progressBar = document.getElementById('progress-bar');
+                const personalCount = document.getElementById('personal-count');
+                
+                countDisplay.style.color = color;
+                progressBar.style.backgroundColor = color;
+                personalCount.style.backgroundColor = color;
+                countDisplay.style.background = `${color}1a`; // Rengin açık tonu için
+                
+                // Socket'e aktif bölümü bildir
+                counterApp.socket.emit('setActiveSection', sectionItem.dataset.id);
+                
+                // Aktif bölümü API'ye kaydet
+                try {
+                    await fetch(`/api/sections/${sectionItem.dataset.id}/activate`, {
+                        method: 'PUT'
+                    });
+                } catch (err) {
+                    console.error('Aktif bölüm güncellenirken hata:', err);
+                }
+            }
+            
+            // Aktif bölümü güncelle
+            document.querySelectorAll('.section-item').forEach(item => {
+                item.classList.remove('active');
+                item.style.borderColor = 'transparent';
+            });
+            sectionItem.classList.add('active');
+            sectionItem.style.borderColor = color;
         });
         
         // Elementleri doğru sırayla ekle
         sectionItem.appendChild(colorIndicator);
         sectionItem.appendChild(sectionText);
-        sectionItem.appendChild(deleteButton);
         return sectionItem;
     }
 
@@ -548,8 +516,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 activeSection.dataset.color = updatedSection.color;
                 activeSection.querySelector('.color-indicator').style.backgroundColor = updatedSection.color;
                 
-                // Eğer aktif bölüm ise tüm değerleri güncelle
+                // Border rengini hemen güncelle
                 if (activeSection.classList.contains('active')) {
+                    activeSection.style.borderColor = updatedSection.color;
+                    
                     const shahada = document.querySelector('.shahada');
                     if (shahada) {
                         shahada.textContent = updatedSection.text;
@@ -559,8 +529,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('target-input').textContent = updatedSection.target.toLocaleString();
                     const countDisplay = document.getElementById('count-display');
                     const progressBar = document.getElementById('progress-bar');
+                    const personalCount = document.getElementById('personal-count');
+                    
                     countDisplay.style.color = updatedSection.color;
                     progressBar.style.backgroundColor = updatedSection.color;
+                    personalCount.style.backgroundColor = updatedSection.color;
+                    countDisplay.style.background = `${updatedSection.color}1a`; // Rengin açık tonu için
                     
                     // CounterApp instance'ını güncelle
                     const counterApp = document.querySelector('#count-display').__counterApp;
@@ -636,12 +610,64 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sayfa yüklendiğinde mevcut bölümleri getir
     async function loadSections() {
         try {
-            const response = await fetch('/api/sections');
-            const sections = await response.json();
+            const [sectionsResponse, activeResponse] = await Promise.all([
+                fetch('/api/sections'),
+                fetch('/api/sections/active')
+            ]);
+            
+            const sections = await sectionsResponse.json();
+            const activeSection = await activeResponse.json();
             
             sections.forEach(section => {
                 const sectionElement = createSectionElement(section);
                 sectionsWrapper.appendChild(sectionElement);
+                
+                // Eğer bu bölüm aktifse, hedefi ve diğer özellikleri ayarla
+                if (activeSection && section._id === activeSection._id) {
+                    const targetValue = parseInt(section.target) || 100;
+                    const color = section.color || '#22c55e';
+                    
+                    // Hedefi güncelle
+                    document.getElementById('target-input').textContent = targetValue.toLocaleString();
+                    
+                    // CounterApp instance'ını güncelle
+                    const counterApp = document.querySelector('#count-display').__counterApp;
+                    if (counterApp) {
+                        counterApp.target = targetValue;
+                        counterApp.activeSection = section._id;
+                        
+                        // Renkleri güncelle
+                        const countDisplay = document.getElementById('count-display');
+                        const progressBar = document.getElementById('progress-bar');
+                        const personalCount = document.getElementById('personal-count');
+                        
+                        countDisplay.style.color = color;
+                        progressBar.style.backgroundColor = color;
+                        personalCount.style.backgroundColor = color;
+                        countDisplay.style.background = `${color}1a`;
+                    }
+                    
+                    // Aktif bölümü işaretle
+                    sectionElement.classList.add('active');
+                    sectionElement.style.borderColor = color;
+                    
+                    // Zikir metnini güncelle
+                    const shahada = document.querySelector('.shahada');
+                    if (shahada) {
+                        shahada.textContent = section.text || '';
+                    }
+
+                    // Aktif bölümü görünür yap
+                    setTimeout(() => {
+                        const sectionRect = sectionElement.getBoundingClientRect();
+                        const containerRect = sectionsWrapper.getBoundingClientRect();
+                        const scrollLeft = sectionRect.left - containerRect.left - 10; // 10px boşluk bırak
+                        sectionsWrapper.scrollTo({
+                            left: scrollLeft,
+                            behavior: 'smooth'
+                        });
+                    }, 100);
+                }
             });
         } catch (err) {
             console.error('Bölümler yüklenirken hata:', err);

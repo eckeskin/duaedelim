@@ -71,6 +71,35 @@ class App {
             }
         });
 
+        // Aktif bölümü getir
+        this.app.get('/api/sections/active', async (req, res) => {
+            try {
+                const activeSection = await Section.findOne({ isActive: true });
+                res.json(activeSection);
+            } catch (err) {
+                res.status(500).json({ error: 'Aktif bölüm alınamadı' });
+            }
+        });
+
+        // Aktif bölümü güncelle
+        this.app.put('/api/sections/:id/activate', async (req, res) => {
+            try {
+                // Önce tüm bölümleri deaktif yap
+                await Section.updateMany({}, { isActive: false });
+                
+                // Seçilen bölümü aktif yap
+                const section = await Section.findByIdAndUpdate(
+                    req.params.id,
+                    { isActive: true },
+                    { new: true }
+                );
+                
+                res.json(section);
+            } catch (err) {
+                res.status(500).json({ error: 'Aktif bölüm güncellenemedi' });
+            }
+        });
+
         this.app.post('/api/sections', async (req, res) => {
             try {
                 const section = new Section({
@@ -129,21 +158,41 @@ class App {
                 onlineUsers.add(userId);
                 this.io.emit('onlineCount', onlineUsers.size);
                 
-                // Kullanıcıya mevcut sayaç durumunu gönder
-                if (activeSection) {
-                    socket.emit('updateCount', activeSection.count);
-                    socket.emit('personalCount', activeSection.personalCounts.get(userId) || 0);
-                    socket.emit('config', { TARGET_COUNT: activeSection.target });
+                // Aktif bölümü bul ve gönder
+                try {
+                    activeSection = await Section.findOne({ isActive: true });
+                    if (activeSection) {
+                        socket.emit('updateCount', activeSection.count);
+                        socket.emit('personalCount', activeSection.personalCounts.get(userId) || 0);
+                        socket.emit('config', { 
+                            TARGET_COUNT: activeSection.target,
+                            color: activeSection.color || '#22c55e'
+                        });
+                    }
+                } catch (err) {
+                    console.error('Aktif bölüm getirme hatası:', err);
                 }
             });
 
             socket.on('setActiveSection', async (sectionId) => {
                 try {
-                    activeSection = await Section.findById(sectionId);
+                    // Önce tüm bölümleri deaktif yap
+                    await Section.updateMany({}, { isActive: false });
+                    
+                    // Seçilen bölümü aktif yap
+                    activeSection = await Section.findByIdAndUpdate(
+                        sectionId,
+                        { isActive: true },
+                        { new: true }
+                    );
+                    
                     if (activeSection) {
                         socket.emit('updateCount', activeSection.count);
                         socket.emit('personalCount', activeSection.personalCounts.get(socket.userId) || 0);
-                        socket.emit('config', { TARGET_COUNT: activeSection.target });
+                        socket.emit('config', { 
+                            TARGET_COUNT: activeSection.target,
+                            color: activeSection.color || '#22c55e'
+                        });
                     }
                 } catch (err) {
                     console.error('Aktif bölüm değiştirme hatası:', err);
