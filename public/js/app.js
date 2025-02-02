@@ -9,6 +9,18 @@ class CounterApp {
         this.personalCount = 0;
         this.lastCount = 0; // Son sayaç değerini sakla
         
+        // Ses ayarlarını localStorage'dan al
+        this.isSoundEnabled = localStorage.getItem('isSoundEnabled') !== 'false';
+        
+        // Ses objelerini oluştur
+        this.clickSound = new Audio('/sounds/click.mp3');
+        this.clickSound.volume = 0.2;
+        this.successSound = new Audio('/sounds/success.mp3');
+        this.successSound.volume = 0.3;
+        
+        // Ses düğmesini oluştur
+        this.createSoundToggle();
+        
         // CounterApp instance'ına erişim için referans ekle
         document.getElementById("count-display").__counterApp = this;
         
@@ -20,6 +32,32 @@ class CounterApp {
 
         this.initializeSocketEvents();
         this.initializeEventListeners();
+    }
+
+    createSoundToggle() {
+        const container = document.querySelector('.container');
+        const soundToggle = document.createElement('button');
+        soundToggle.className = 'sound-toggle';
+        soundToggle.innerHTML = this.getSoundIcon();
+        soundToggle.title = this.isSoundEnabled ? 'Sesi Kapat' : 'Sesi Aç';
+        
+        // Ses simgesinin rengini varsayılan olarak ayarla
+        soundToggle.style.color = 'var(--section-color)';
+        
+        soundToggle.addEventListener('click', () => {
+            this.isSoundEnabled = !this.isSoundEnabled;
+            localStorage.setItem('isSoundEnabled', this.isSoundEnabled);
+            soundToggle.innerHTML = this.getSoundIcon();
+            soundToggle.title = this.isSoundEnabled ? 'Sesi Kapat' : 'Sesi Aç';
+        });
+        
+        container.appendChild(soundToggle);
+    }
+
+    getSoundIcon() {
+        return this.isSoundEnabled 
+            ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>'
+            : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>';
     }
 
     setupVisibilityListener() {
@@ -98,11 +136,13 @@ class CounterApp {
                 const countDisplay = document.getElementById('count-display');
                 const progressBar = document.getElementById('progress-bar');
                 const personalCount = document.getElementById('personal-count');
+                const soundToggle = document.querySelector('.sound-toggle');
                 
                 countDisplay.style.color = config.color;
                 progressBar.style.backgroundColor = config.color;
                 personalCount.style.backgroundColor = config.color;
                 countDisplay.style.background = `${config.color}1a`;
+                if (soundToggle) soundToggle.style.color = config.color;
             }
         });
 
@@ -175,23 +215,44 @@ class CounterApp {
         if (count >= this.target && !this.hasReachedTarget) {
             this.hasReachedTarget = true;
             
-            // Kişisel sayacı gizle
-            document.getElementById("personal-count").style.opacity = "0";
-            
             // Ana sayacı devre dışı bırak
             document.getElementById("count-display").style.pointerEvents = "none";
             
-            // Success modal'ı göster
-            document.getElementById("success-modal").style.display = "flex";
+            // Başarı sesini çal ve hemen ardından sayacı sıfırla
+            if (this.isSoundEnabled) {
+                this.successSound.currentTime = 0;
+                this.successSound.play()
+                    .then(() => {
+                        // Ses çalmaya başladıktan 500ms sonra sayacı sıfırla
+                        setTimeout(() => this.resetCounter(), 500);
+                    })
+                    .catch(err => {
+                        console.log('Ses çalma hatası:', err);
+                        // Ses çalınamasa bile sayacı sıfırla
+                        setTimeout(() => this.resetCounter(), 500);
+                    });
+            } else {
+                // Ses kapalıysa hemen sıfırla
+                setTimeout(() => this.resetCounter(), 500);
+            }
         }
     }
 
     initializeEventListeners() {
         document.getElementById("count-display").addEventListener("click", (e) => {
+            // Eğer tıklanan element ses düğmesi ise, sayacı artırma
+            if (e.target.closest('.sound-toggle')) return;
+            
             // Eğer inspect modunda ise (F12 veya sağ tık + incele) tıklamayı engelle
             if (e.isTrusted === false) return;
 
             if (!this.hasReachedTarget && this.activeSection) {
+                // Ses açıksa ve tıklama gerçekleştiyse sesi çal
+                if (this.isSoundEnabled) {
+                    this.clickSound.currentTime = 0;
+                    this.clickSound.play().catch(err => console.log('Ses çalma hatası:', err));
+                }
+                
                 this.socket.emit("increment", {
                     userId: this.userId,
                     sectionId: this.activeSection
@@ -246,7 +307,6 @@ class CounterApp {
         
         // Ana sayacı aktif hale getir
         document.getElementById("count-display").style.pointerEvents = "auto";
-        document.getElementById("success-modal").style.display = "none";
         
         // Socket'e bildir
         this.socket.emit("resetCount", this.activeSection);
@@ -572,6 +632,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const targetValue = parseInt(sectionItem.dataset.target) || 100;
             const color = sectionItem.dataset.color || '#22c55e';
             
+            // CSS değişkenini güncelle
+            document.documentElement.style.setProperty('--section-color', color);
+            
             // Hedefi güncelle
             document.getElementById('target-input').textContent = targetValue.toLocaleString();
             
@@ -762,6 +825,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     const targetValue = parseInt(section.target) || 100;
                     const color = section.color || '#22c55e';
                     
+                    // CSS değişkenini güncelle
+                    document.documentElement.style.setProperty('--section-color', color);
+                    
                     // Hedefi güncelle
                     document.getElementById('target-input').textContent = targetValue.toLocaleString();
                     
@@ -780,16 +846,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         progressBar.style.backgroundColor = color;
                         personalCount.style.backgroundColor = color;
                         countDisplay.style.background = `${color}1a`;
-                    }
-                    
-                    // Aktif bölümü işaretle
-                    sectionElement.classList.add('active');
-                    sectionElement.style.borderColor = color;
-                    
-                    // Zikir metnini güncelle
-                    const shahada = document.querySelector('.shahada');
-                    if (shahada) {
-                        shahada.textContent = section.text || '';
+                        
+                        // CounterApp instance'ını güncelle
+                        counterApp.target = targetValue;
+                        counterApp.activeSection = section._id;
+                        
+                        // Aktif bölümü işaretle
+                        sectionElement.classList.add('active');
+                        sectionElement.style.borderColor = color;
+                        
+                        // Zikir metnini güncelle
+                        const shahada = document.querySelector('.shahada');
+                        if (shahada) {
+                            shahada.textContent = section.text || '';
+                        }
                     }
                 }
             });

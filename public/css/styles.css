@@ -233,16 +233,20 @@ html, body {
 }
 
 @media (max-width: 480px) {
+    .container {
+        min-width: 90%;
+        max-width: 90%;
+        margin: 0 auto;
+        padding: 1.25rem;
+        border-radius: 20px;
+    }
+
     .sections-container {
         padding: 1.5rem;
         margin-bottom: 0;
         height: 68px;
-    }
-
-    .container {
-        min-width: 100%;
-        margin: 0;
-        border-radius: 24px;
+        min-width: 90%;
+        max-width: 90%;
     }
 
     .add-button {
@@ -259,9 +263,9 @@ html, body {
     }
 
     #count-display {
-        width: 180px;
-        height: 180px;
-        font-size: 3rem;
+        width: 220px;
+        height: 220px;
+        font-size: 3.5rem;
     }
 
     .arabic-text {
@@ -375,7 +379,7 @@ html, body {
     position: relative;
     display: flex;
     align-items: center;
-    padding: 8px 16px;
+    padding: 8px 12px;
     background: white;
     border-radius: 8px;
     margin-right: 10px;
@@ -393,6 +397,7 @@ html, body {
     background: #f8fafc;
     transform: translateY(-1px);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 2px solid var(--section-color, #22c55e);
 }
 
 .section-item:hover {
@@ -400,6 +405,7 @@ html, body {
 }
 
 .section-item span {
+    color: #1f2937;
     flex-grow: 1;
     text-align: left;
     white-space: nowrap;
@@ -831,4 +837,35 @@ html, body {
 
 .delete-modal-confirm:hover {
     background: #dc2626;
+}
+
+.sound-toggle {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+    z-index: 10;
+    color: var(--section-color);
+    border-radius: 50%;
+}
+
+.sound-toggle:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.05);
+    transform: scale(1.1);
+}
+
+.sound-toggle:active {
+    transform: scale(0.95);
+}
+
+.sound-toggle svg {
+    width: 20px;
+    height: 20px;
+    display: block;
 }

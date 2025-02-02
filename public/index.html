@@ -16,24 +16,6 @@
          -ms-user-select: none;
          user-select: none;
          }
-         #success-modal {
-         display: none;
-         user-select: none; /* Modal içindeki yazıyı seçilemez yap */
-         }
-         #success-modal > div {
-         box-shadow: none !important;
-         border: none !important;
-         }
-         #close-modal {
-         box-shadow: none !important;
-         border: none !important;
-         outline: none !important;
-         }
-         #close-modal:focus, #close-modal:active {
-         outline: none !important;
-         box-shadow: none !important;
-         background-color: #3b82f6 !important;
-         }
       </style>
    </head>
    <body class="bg-green-200 flex flex-col items-center justify-center min-h-screen">
@@ -55,7 +37,7 @@
 
          <div class="container">
             <div class="arabic-text">
-               بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+               بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
             </div>
             
             <div class="shahada long-text">
@@ -84,15 +66,6 @@
 
             <!-- Başarı mesajı -->
             <div id="success-message" class="success-message">✨ Hedefe ulaşıldı ✨</div>
-         </div>
-      </div>
-
-      <!-- Başarı Modal -->
-      <div id="success-modal" class="success-modal">
-         <div class="modal-content">
-            <h2>🎉 Tebrikler!</h2>
-            <p>Hedefe ulaşıldı!</p>
-            <button id="close-modal">Tamam</button>
          </div>
       </div>
 
